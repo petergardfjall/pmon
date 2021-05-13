@@ -1,0 +1,59 @@
+#!/bin/bash
+
+here=$(realpath $(dirname ${0}))
+scriptname=$(basename ${0})
+export CONFIG_DIR=${here}/config
+export DATA_DIR=${here}/data
+
+# host port to publish prometheus api port on
+export PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
+
+# host port to publish process-exporter metrics on
+export PROCESS_EXPORTER_PORT=${PROCESS_EXPORTER_PORT:-9256}
+
+# host port to publish grafana on
+export GRAFANA_PORT=${GRAFANA_PORT:-3000}
+# grafana admin password
+export GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-password}
+
+
+function print_usage {
+    echo "usage: ${scriptname} up|logs|down"
+    exit 1
+}
+
+function log {
+    echo -e "\e[32m[info]${1}\e[0m"
+}
+
+
+function up {
+    log "starting ..."
+    mkdir -p "${DATA_DIR}/prometheus"
+    docker-compose -f ${CONFIG_DIR}/docker-compose.yml up -d
+}
+
+
+
+case ${1} in
+    up)
+        up
+        ;;
+    logs)
+        shift
+        docker-compose -f ${CONFIG_DIR}/docker-compose.yml logs -f ${@}
+        ;;
+
+    down)
+        log "stopping containers ..."
+        docker-compose -f ${CONFIG_DIR}/docker-compose.yml stop
+        log "removing containers ..."
+        docker-compose -f ${CONFIG_DIR}/docker-compose.yml rm -f
+        log "removing network ..."
+        docker network rm config_metrics_net
+        ;;
+    *)
+        echo "error: unrecognized command: ${1}"
+        print_usage
+        ;;
+esac

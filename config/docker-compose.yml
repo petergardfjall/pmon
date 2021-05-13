@@ -1,0 +1,95 @@
+version: "3.4"
+
+# set up a network local to the host to which we'll attach the containers.
+networks:
+  metrics_net:
+    driver: bridge
+
+x-app: &logopts
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "1"
+
+
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v2.27.0
+    <<: *logopts
+    restart: unless-stopped
+    networks:
+    - metrics_net
+    command:
+    - --config.file=/etc/prometheus/config.yaml
+    - --log.level=debug
+    # TODO: persist data?
+    # - --storage.tsdb.path=/data
+    ports:
+    - ${PROMETHEUS_PORT}:9090
+    volumes:
+    - "${CONFIG_DIR}/prometheus/config.yaml:/etc/prometheus/config.yaml:ro"
+    # TODO: persist data?
+    # - "${DATA_DIR}/prometheus:/data:rw"
+
+
+  process_exporter:
+    container_name: process-exporter
+    image: ncabatoff/process-exporter:0.7.5
+    <<: *logopts
+    restart: unless-stopped
+    privileged: true
+    networks:
+    - metrics_net
+    expose:
+    - 9256
+    ports:
+    - ${PROCESS_EXPORTER_PORT}:9256
+    command:
+    - --config.path=/config/config.yaml
+    - --procfs=/host/proc
+    # the names of processes to monitor:
+    # `-procnames chromium-browse,bash,gvim,prometheus,process-exporter`
+    # - --procnames=
+    volumes:
+    - "/proc:/host/proc:ro"
+    - "${CONFIG_DIR}/process-exporter:/config:ro"
+
+
+  node_exporter:
+    container_name: node-exporter
+    image: quay.io/prometheus/node-exporter:v1.1.2
+    <<: *logopts
+    restart: unless-stopped
+    command:
+    - '--path.rootfs=/host'
+    networks:
+    - metrics_net
+    expose:
+    - 9100
+    restart: unless-stopped
+    volumes:
+    - '/:/host:ro,rslave'
+
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:7.5.6
+    <<: *logopts
+    restart: unless-stopped
+    networks:
+    - metrics_net
+    ports:
+    - ${GRAFANA_PORT}:3000
+    volumes:
+    - "${CONFIG_DIR}/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro"
+    - "${CONFIG_DIR}/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro"
+    - "${CONFIG_DIR}/grafana/dashboards:/etc/dashboards"
+    # TODO: persist data?
+    # - ${PWD}/grafana-data:/var/lib/grafana
+    environment:
+    - GF_SECURITY_SERVER_HTTP_PORT=3000
+    - GF_SECURITY_ADMIN_USER=admin
+    - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
