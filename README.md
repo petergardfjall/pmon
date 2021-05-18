@@ -1,6 +1,6 @@
 # About
-A self-contained monitoring environment for processes running on `localhost`
-that is quick to bring up and easy to dispose.
+A self-contained monitoring environment for `localhost` processes that is quick
+to bring up and easy to dispose.
 
 It runs [process-exporter](https://github.com/ncabatoff/process-exporter) to
 collect fine-grained metrics about processes running on the host,
