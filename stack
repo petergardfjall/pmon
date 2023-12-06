@@ -30,7 +30,7 @@ function log {
 function up {
     log "starting ..."
     mkdir -p "${DATA_DIR}/prometheus"
-    docker-compose -f ${CONFIG_DIR}/docker-compose.yml up -d
+    docker compose -f ${CONFIG_DIR}/docker-compose.yml up -d
 }
 
 
@@ -41,14 +41,14 @@ case ${1} in
         ;;
     logs)
         shift
-        docker-compose -f ${CONFIG_DIR}/docker-compose.yml logs -f ${@}
+        docker compose -f ${CONFIG_DIR}/docker-compose.yml logs -f ${@}
         ;;
 
     down)
         log "stopping containers ..."
-        docker-compose -f ${CONFIG_DIR}/docker-compose.yml stop
+        docker compose -f ${CONFIG_DIR}/docker-compose.yml stop
         log "removing containers ..."
-        docker-compose -f ${CONFIG_DIR}/docker-compose.yml rm -f
+        docker compose -f ${CONFIG_DIR}/docker-compose.yml rm -f
         log "removing network ..."
         docker network rm config_metrics_net
         ;;
